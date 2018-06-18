@@ -1,4 +1,4 @@
-import * as fs from "fs"
+import fs from "fs"
 
 const validateDangerfileExists = (filePath: string): boolean => {
   let stat: fs.Stats | null = null

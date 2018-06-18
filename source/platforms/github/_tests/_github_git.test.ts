@@ -5,13 +5,11 @@ import { GitCommit } from "../../../dsl/Commit"
 import { FakeCI } from "../../../ci_source/providers/Fake"
 import { readFileSync } from "fs"
 import { resolve, join as pathJoin } from "path"
-import { EOL } from "os"
 import { gitHubGitDSL as gitJSONToGitDSL } from "../GitHubGit"
 
-import * as NodeGitHub from "@octokit/rest"
+import NodeGitHub from "@octokit/rest"
 import { GitHubDSL } from "../../../dsl/GitHubDSL"
 import { GitDSL, GitJSONDSL } from "../../../dsl/GitDSL"
-import { Platform } from "../../platform"
 
 const fixtures = resolve(__dirname, "..", "..", "_tests", "fixtures")
 

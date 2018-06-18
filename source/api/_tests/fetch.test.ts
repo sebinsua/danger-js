@@ -1,5 +1,5 @@
-// import * as jest from 'jest';
-import * as http from "http"
+// import jest from 'jest';
+import http from "http"
 
 import { api } from "../fetch"
 

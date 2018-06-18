@@ -1,7 +1,7 @@
 import * as fs from "fs"
 
 import { debug } from "../../debug"
-import * as _require from "require-from-string"
+import _require from "require-from-string"
 
 import { DangerResults, DangerRuntimeContainer } from "../../dsl/DangerResults"
 import { DangerContext } from "../../runner/Dangerfile"

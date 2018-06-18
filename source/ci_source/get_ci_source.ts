@@ -1,5 +1,5 @@
 import { providers } from "./providers"
-import * as fs from "fs"
+import fs from "fs"
 import { resolve } from "path"
 import { Env, CISource } from "./ci_source"
 

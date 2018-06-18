@@ -1,6 +1,6 @@
 import { debug } from "../../debug"
 import * as node_fetch from "node-fetch"
-import * as v from "voca"
+import v from "voca"
 
 import {
   BitBucketServerPRDSL,

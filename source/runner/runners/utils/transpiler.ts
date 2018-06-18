@@ -3,43 +3,64 @@ import * as path from "path"
 import * as JSON5 from "json5"
 import { debug } from "../../../debug"
 
+const d = debug("transpiler:setup")
+
+let hasChecked = false
 let hasNativeTypeScript = false
 let hasBabel = false
 let hasBabelTypeScript = false
 let hasFlow = false
-let hasChecked = false
 
-const d = debug("transpiler:setup")
+const checkForPackage = (pkgs: string | ReadonlyArray<string>): boolean => {
+  const packages = Array.isArray(pkgs) ? pkgs : [pkgs]
 
-// Yes, lots of linter disables, but I want to support TS/Babel/Neither correctly
+  for (const pkg of packages) {
+    try {
+      require.resolve(pkg) // tslint:disable-line
+      return true
+    } catch (err) {
+      continue
+    }
+  }
+
+  return false
+}
+
+const whichPackage = (pkgs: string | ReadonlyArray<string>): string => {
+  const packages = Array.isArray(pkgs) ? pkgs : [pkgs]
+
+  for (const pkg of packages) {
+    try {
+      return require.resolve(pkg) // tslint:disable-line
+    } catch (err) {
+      continue
+    }
+  }
+
+  throw new Error(`whichPackage() could not resolve a package for: ${packages.join(", ")}`)
+}
+
 export const checkForNodeModules = () => {
-  try {
-    require.resolve("typescript") // tslint:disable-line
-    hasNativeTypeScript = true
-  } catch (e) {
+  hasNativeTypeScript = checkForPackage("typescript")
+  if (!hasNativeTypeScript) {
     d("Does not have TypeScript set up")
   }
 
-  try {
-    require.resolve("babel-core") // tslint:disable-line
-    require("babel-polyfill") // tslint:disable-line
-    hasBabel = true
-
-    try {
-      require.resolve("babel-plugin-transform-typescript") // tslint:disable-line
-      hasBabelTypeScript = true
-    } catch (e) {
-      d("Does not have Babel 7 TypeScript set up")
-    }
-
-    try {
-      require.resolve("babel-plugin-transform-flow-strip-types") // tslint:disable-line
-      hasFlow = true
-    } catch (e) {
-      d("Does not have Flow set up")
-    }
-  } catch (e) {
+  hasBabel = checkForPackage(["@babel/core", "babel-core"])
+  if (!hasBabel) {
     d("Does not have Babel set up")
+  } else {
+    require(whichPackage(["@babel/polyfill", "babel-polyfill"]))
+  }
+
+  hasBabelTypeScript = checkForPackage(["@babel/plugin-transform-typescript", "babel-plugin-transform-typescript"])
+  if (!hasBabelTypeScript) {
+    d("Does not have Babel 7 TypeScript set up")
+  }
+
+  hasFlow = checkForPackage(["@babel/plugin-transform-flow-strip-types", "babel-plugin-transform-flow-strip-types"])
+  if (!hasFlow) {
+    d("Does not have Flow set up")
   }
 
   hasChecked = true
@@ -49,6 +70,7 @@ export const checkForNodeModules = () => {
 
 export const typescriptify = (content: string): string => {
   const ts = require("typescript") // tslint:disable-line
+
   const compilerOptions = JSON5.parse(fs.readFileSync("tsconfig.json", "utf8"))
   let result = ts.transpileModule(content, sanitizeTSConfig(compilerOptions))
   return result.outputText
@@ -75,13 +97,32 @@ const sanitizeTSConfig = (config: any) => {
   return safeConfig
 }
 
-export const babelify = (content: string, filename: string, extraPlugins: string[]): string => {
-  const babel = require("babel-core") // tslint:disable-line
+const isPluginWithinBabelConfig = (plugins: string[], pluginName: string): boolean => {
+  if (!plugins.length) {
+    return false
+  }
+
+  return plugins.some(
+    (plugin: string | ReadonlyArray<string>) =>
+      Array.isArray(plugin) ? plugin[0].includes(pluginName) : plugin.includes(pluginName)
+  )
+}
+
+const filterPlugin = (plugins: string[], pluginName: string): string[] => {
+  if (!plugins.length) {
+    return plugins
+  }
+
+  return plugins.filter(
+    (plugin: string | ReadonlyArray<string>) =>
+      Array.isArray(plugin) ? !plugin[0].includes(pluginName) : !plugin.includes(pluginName)
+  )
+}
+
+export const babelify = (babel: any, content: string, filename: string, plugins: string[]): string => {
   if (!babel.transform) {
     return content
   }
-
-  const options = babel.loadOptions ? babel.loadOptions({}) : { plugins: [] }
 
   const fileOpts = {
     filename,
@@ -89,10 +130,11 @@ export const babelify = (content: string, filename: string, extraPlugins: string
     sourceMap: false,
     sourceFileName: undefined,
     sourceType: "module",
-    plugins: [...extraPlugins, ...options.plugins],
+    plugins,
   }
 
   const result = babel.transform(content, fileOpts)
+
   return result.code
 }
 
@@ -108,12 +150,44 @@ export default (code: string, filename: string) => {
   }
 
   let result = code
-  if (hasNativeTypeScript && filetype.startsWith(".ts")) {
+  if (filetype.startsWith(".ts") && hasBabel && hasBabelTypeScript) {
+    const babel = require(whichPackage(["@babel/core", "babel-core"]))
+
+    const options = babel.loadOptions ? babel.loadOptions({}) : { plugins: [] }
+
+    const pluginsWithoutFlow = filterPlugin(options.plugins, "plugin-transform-flow-strip-types")
+
+    const withoutTypeScript = !isPluginWithinBabelConfig(pluginsWithoutFlow, "plugin-transform-typescript")
+
+    const plugins =
+      withoutTypeScript && hasBabelTypeScript
+        ? [
+            whichPackage(["@babel/plugin-transform-typescript", "babel-plugin-transform-typescript"]),
+            ...pluginsWithoutFlow,
+          ]
+        : pluginsWithoutFlow
+
+    result = babelify(babel, code, filename, plugins)
+  } else if (filetype.startsWith(".ts") && hasNativeTypeScript) {
     result = typescriptify(code)
-  } else if (hasBabel && hasBabelTypeScript && filetype.startsWith(".ts")) {
-    result = babelify(code, filename, ["transform-typescript"])
-  } else if (hasBabel && filetype.startsWith(".js")) {
-    result = babelify(code, filename, hasFlow ? ["transform-flow-strip-types"] : [])
+  } else if (filetype.startsWith(".js") && hasBabel) {
+    const babel = require(whichPackage(["@babel/core", "babel-core"]))
+
+    const options = babel.loadOptions ? babel.loadOptions({}) : { plugins: [] }
+
+    const pluginsWithoutTypeScript = filterPlugin(options.plugins, "plugin-transform-typescript")
+
+    const withoutFlow = !isPluginWithinBabelConfig(pluginsWithoutTypeScript, "plugin-transform-flow-strip-types")
+
+    const plugins =
+      withoutFlow && hasFlow
+        ? [
+            whichPackage(["@babel/plugin-transform-flow-strip-types", "babel-plugin-transform-flow-strip-types"]),
+            ...pluginsWithoutTypeScript,
+          ]
+        : pluginsWithoutTypeScript
+
+    result = babelify(babel, code, filename, plugins)
   }
 
   return result

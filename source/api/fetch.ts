@@ -1,5 +1,5 @@
 import { debug } from "../debug"
-import * as node_fetch from "node-fetch"
+import node_fetch, { Request, RequestInit, Response } from "node-fetch"
 
 const d = debug("networking")
 declare const global: any
@@ -11,11 +11,7 @@ declare const global: any
  * @param {fetch.RequestInit} [init] the usual options
  * @returns {Promise<fetch.Response>} network-y promise
  */
-export function api(
-  url: string | node_fetch.Request,
-  init: node_fetch.RequestInit,
-  suppressErrorReporting?: boolean
-): Promise<node_fetch.Response> {
+export function api(url: string | Request, init: RequestInit, suppressErrorReporting?: boolean): Promise<Response> {
   const isTests = typeof jest !== "undefined"
   if (isTests && !url.toString().includes("localhost")) {
     const message = `No API calls in tests please: ${url}`
@@ -58,7 +54,7 @@ export function api(
     d(output.join(" "))
   }
   const originalFetch: any = node_fetch
-  return originalFetch(url, init).then(async (response: node_fetch.Response) => {
+  return originalFetch(url, init).then(async (response: Response) => {
     // Handle failing errors
     if (!suppressErrorReporting && !response.ok) {
       // we should not modify the response when an error occur to allow body stream to be read again if needed

@@ -1,11 +1,11 @@
-import * as readlineSync from "readline-sync"
-import * as supportsHyperlinks from "supports-hyperlinks"
-import * as hyperLinker from "hyperlinker"
+import readlineSync from "readline-sync"
+import supportsHyperlinks from "supports-hyperlinks"
+import hyperLinker from "hyperlinker"
 import chalk from "chalk"
 
 import { basename } from "path"
 import { setTimeout } from "timers"
-import * as fs from "fs"
+import fs from "fs"
 
 import { getRepoSlug } from "./get-repo-slug"
 import { InitState, InitUI } from "./interfaces"

@@ -1,5 +1,5 @@
-import * as url from "url"
-import * as includes from "lodash.includes"
+import url from "url"
+import includes from "lodash.includes"
 
 export interface PullRequestParts {
   pullRequestNumber: string

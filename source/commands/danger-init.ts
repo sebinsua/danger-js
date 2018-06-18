@@ -1,9 +1,9 @@
 #! /usr/bin/env node
 
 import chalk from "chalk"
-import * as program from "commander"
+import program from "commander"
 
-import * as fs from "fs"
+import fs from "fs"
 
 import { generateDefaultDangerfile } from "./init/default-dangerfile"
 import { travis, circle, unsure } from "./init/add-to-ci"
