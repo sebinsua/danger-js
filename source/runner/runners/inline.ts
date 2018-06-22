@@ -1,4 +1,4 @@
-import * as fs from "fs"
+import fs from "fs"
 
 import { debug } from "../../debug"
 import _require from "require-from-string"

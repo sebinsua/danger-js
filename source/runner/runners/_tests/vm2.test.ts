@@ -1,15 +1,11 @@
 // Note: This file is ignored by Wallaby.js (but is included in jest runs)
 
 import { contextForDanger } from "../../Dangerfile"
-import inlineRunner from "../inline"
 import vm2 from "../vm2"
 
 import { FakeCI } from "../../../ci_source/providers/Fake"
 import { FakePlatform } from "../../../platforms/FakePlatform"
 import { Executor, ExecutorOptions } from "../../Executor"
-
-import * as os from "os"
-import * as fs from "fs"
 
 import { resolve } from "path"
 import { jsonToDSL } from "../../jsonToDSL"

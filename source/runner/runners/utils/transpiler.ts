@@ -1,6 +1,6 @@
-import * as fs from "fs"
-import * as path from "path"
-import * as JSON5 from "json5"
+import fs from "fs"
+import path from "path"
+import JSON5 from "json5"
 import { debug } from "../../../debug"
 
 const d = debug("transpiler:setup")
@@ -97,26 +97,20 @@ const sanitizeTSConfig = (config: any) => {
   return safeConfig
 }
 
-const isPluginWithinBabelConfig = (plugins: string[], pluginName: string): boolean => {
+const isPluginWithinBabelConfig = (plugins: any[], pluginName: string): boolean => {
   if (!plugins.length) {
     return false
   }
 
-  return plugins.some(
-    (plugin: string | ReadonlyArray<string>) =>
-      Array.isArray(plugin) ? plugin[0].includes(pluginName) : plugin.includes(pluginName)
-  )
+  return plugins.some((plugin: any) => plugin.file.request.includes(pluginName))
 }
 
-const filterPlugin = (plugins: string[], pluginName: string): string[] => {
+const filterPlugin = (plugins: any[], pluginName: string): string[] => {
   if (!plugins.length) {
     return plugins
   }
 
-  return plugins.filter(
-    (plugin: string | ReadonlyArray<string>) =>
-      Array.isArray(plugin) ? !plugin[0].includes(pluginName) : !plugin.includes(pluginName)
-  )
+  return plugins.filter((plugin: any) => plugin.file.request.includes(pluginName))
 }
 
 export const babelify = (babel: any, content: string, filename: string, plugins: string[]): string => {
@@ -153,7 +147,7 @@ export default (code: string, filename: string) => {
   if (filetype.startsWith(".ts") && hasBabel && hasBabelTypeScript) {
     const babel = require(whichPackage(["@babel/core", "babel-core"]))
 
-    const options = babel.loadOptions ? babel.loadOptions({}) : { plugins: [] }
+    const { options } = babel.loadPartialConfig ? babel.loadPartialConfig() : { options: { plugins: [] } }
 
     const pluginsWithoutFlow = filterPlugin(options.plugins, "plugin-transform-flow-strip-types")
 
@@ -173,7 +167,7 @@ export default (code: string, filename: string) => {
   } else if (filetype.startsWith(".js") && hasBabel) {
     const babel = require(whichPackage(["@babel/core", "babel-core"]))
 
-    const options = babel.loadOptions ? babel.loadOptions({}) : { plugins: [] }
+    const { options } = babel.loadPartialConfig ? babel.loadPartialConfig() : { options: { plugins: [] } }
 
     const pluginsWithoutTypeScript = filterPlugin(options.plugins, "plugin-transform-typescript")
 

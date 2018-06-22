@@ -3,7 +3,7 @@ jest.mock("fs", () => ({
 }))
 
 import { typescriptify } from "../transpiler"
-import * as fs from "fs"
+import fs from "fs"
 
 describe("typescriptify", () => {
   it("removes the module option in a tsconfig ", () => {
